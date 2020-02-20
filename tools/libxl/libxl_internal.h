@@ -161,7 +161,7 @@
 #endif
   /* all of these macros preserve errno (saving and restoring) */
 
-/* 
+/*
  * A macro to help retain the first failure in "do as much as you can"
  * situations.  Note the hard-coded use of the variable name `rc`.
  */
@@ -1367,7 +1367,7 @@ typedef struct {
     const char *shim_cmdline;
     const char *pv_cmdline;
 
-    /* 
+    /*
      * dm_runas: If set, pass qemu the `-runas` parameter with this
      *  string as an argument
      * dm_kill_uid: If set, the devicemodel should be killed by
@@ -4154,6 +4154,7 @@ struct libxl__domain_create_state {
     /* necessary if the domain creation failed and we have to destroy it */
     libxl__domain_destroy_state dds;
     libxl__multidev multidev;
+    libxl__xswait_state console_xswait;
 };
 
 _hidden int libxl__device_nic_set_devids(libxl__gc *gc,
