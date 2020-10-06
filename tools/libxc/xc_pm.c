@@ -262,13 +262,15 @@ int xc_get_cpufreq_para(xc_interface *xch, int cpuid,
     }
     else
     {
-        user_para->cpuinfo_cur_freq = sys_para->cpuinfo_cur_freq;
-        user_para->cpuinfo_max_freq = sys_para->cpuinfo_max_freq;
-        user_para->cpuinfo_min_freq = sys_para->cpuinfo_min_freq;
-        user_para->scaling_cur_freq = sys_para->scaling_cur_freq;
-        user_para->scaling_max_freq = sys_para->scaling_max_freq;
-        user_para->scaling_min_freq = sys_para->scaling_min_freq;
-        user_para->turbo_enabled    = sys_para->turbo_enabled;
+        user_para->cpuinfo_cur_freq  = sys_para->cpuinfo_cur_freq;
+        user_para->cpuinfo_max_freq  = sys_para->cpuinfo_max_freq;
+        user_para->cpuinfo_min_freq  = sys_para->cpuinfo_min_freq;
+        user_para->scaling_cur_freq  = sys_para->scaling_cur_freq;
+        user_para->scaling_max_perf  = sys_para->scaling_max_perf;
+        user_para->scaling_min_perf  = sys_para->scaling_min_perf;
+        user_para->scaling_turbo_pct = sys_para->scaling_turbo_pct;
+        user_para->perf_alias        = sys_para->perf_alias;
+        user_para->turbo_enabled     = sys_para->turbo_enabled;
 
         memcpy(user_para->scaling_driver,
                 sys_para->scaling_driver, CPUFREQ_NAME_LEN);

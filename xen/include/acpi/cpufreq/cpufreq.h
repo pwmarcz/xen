@@ -53,6 +53,12 @@ struct perf_limits {
     uint32_t min_policy_pct;
 };
 
+struct internal_governor {
+    char *avail_gov;
+    uint32_t gov_num;
+    uint32_t cur_gov;
+};
+
 struct cpufreq_policy {
     cpumask_var_t       cpus;          /* affected CPUs */
     unsigned int        shared_type;   /* ANY or ALL affected CPUs
@@ -66,6 +72,7 @@ struct cpufreq_policy {
                                  * governors are used */
     struct perf_limits  limits;
     struct cpufreq_governor     *governor;
+    struct internal_governor    *internal_gov;
 
     bool_t              resume; /* flag for cpufreq 1st run
                                  * S3 wakeup, hotplug cpu, etc */
@@ -97,6 +104,14 @@ struct cpufreq_freqs {
 /*********************************************************************
  *                          CPUFREQ GOVERNORS                        *
  *********************************************************************/
+
+
+/* Please add internal governors here */
+#define NON_INTERNAL_GOV              (0)
+#define INTERNAL_GOV_POWERSAVE        (1)
+#define INTERNAL_GOV_PERFORMANCE      (2)
+#define INTERNAL_GOV_USERSPACE        (3)
+#define INTERNAL_GOV_ONDEMAND         (4)
 
 #define CPUFREQ_GOV_START  1
 #define CPUFREQ_GOV_STOP   2

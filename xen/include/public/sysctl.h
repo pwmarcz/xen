@@ -305,11 +305,28 @@ struct xen_ondemand {
  * same as sysfs file name of native linux
  */
 #define CPUFREQ_NAME_LEN 16
+
+enum xen_perf_alias {
+    FREQUENCY  = 0,
+    PERCENTAGE = 1
+};
+
 struct xen_get_cpufreq_para {
     /* IN/OUT variable */
     uint32_t cpu_num;
     uint32_t freq_num;
     uint32_t gov_num;
+    int32_t turbo_enabled;
+
+    uint32_t cpuinfo_cur_freq;
+    uint32_t cpuinfo_max_freq;
+    uint32_t cpuinfo_min_freq;
+    uint32_t scaling_cur_freq;
+
+    uint32_t scaling_turbo_pct;
+    uint32_t scaling_max_perf;
+    uint32_t scaling_min_perf;
+    enum xen_perf_alias perf_alias;
 
     /* for all governors */
     /* OUT variable */
@@ -317,23 +334,13 @@ struct xen_get_cpufreq_para {
     XEN_GUEST_HANDLE_64(uint32) scaling_available_frequencies;
     XEN_GUEST_HANDLE_64(char)   scaling_available_governors;
     char scaling_driver[CPUFREQ_NAME_LEN];
-
-    uint32_t cpuinfo_cur_freq;
-    uint32_t cpuinfo_max_freq;
-    uint32_t cpuinfo_min_freq;
-    uint32_t scaling_cur_freq;
-
     char scaling_governor[CPUFREQ_NAME_LEN];
-    uint32_t scaling_max_freq;
-    uint32_t scaling_min_freq;
 
     /* for specific governor */
     union {
         struct  xen_userspace userspace;
         struct  xen_ondemand ondemand;
     } u;
-
-    int32_t turbo_enabled;
 };
 
 struct xen_set_cpufreq_gov {
@@ -346,6 +353,8 @@ struct xen_set_cpufreq_para {
     #define SCALING_SETSPEED           3
     #define SAMPLING_RATE              4
     #define UP_THRESHOLD               5
+    #define SCALING_MAX_PCT            6
+    #define SCALING_MIN_PCT            7
 
     uint32_t ctrl_type;
     uint32_t ctrl_value;

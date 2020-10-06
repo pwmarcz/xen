@@ -1272,6 +1272,13 @@ detection of systems known to misbehave upon accesses to that port.
 ### idle_latency_factor (x86)
 > `= <integer>`
 
+### intel_pstate
+> `= <boolean>`
+
+> Default: `false`
+
+Enable the loading of the intel pstate driver.
+
 ### ioapic_ack (x86)
 > `= old | new`
 

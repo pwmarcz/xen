@@ -1895,6 +1895,17 @@ struct xc_get_cpufreq_para {
     uint32_t cpu_num;
     uint32_t freq_num;
     uint32_t gov_num;
+    int32_t turbo_enabled;
+
+    uint32_t cpuinfo_cur_freq;
+    uint32_t cpuinfo_max_freq;
+    uint32_t cpuinfo_min_freq;
+    uint32_t scaling_cur_freq;
+
+    uint32_t scaling_turbo_pct;
+    uint32_t scaling_max_perf;
+    uint32_t scaling_min_perf;
+    enum xen_perf_alias perf_alias;
 
     /* for all governors */
     /* OUT variable */
@@ -1903,22 +1914,13 @@ struct xc_get_cpufreq_para {
     char     *scaling_available_governors;
     char scaling_driver[CPUFREQ_NAME_LEN];
 
-    uint32_t cpuinfo_cur_freq;
-    uint32_t cpuinfo_max_freq;
-    uint32_t cpuinfo_min_freq;
-    uint32_t scaling_cur_freq;
-
     char scaling_governor[CPUFREQ_NAME_LEN];
-    uint32_t scaling_max_freq;
-    uint32_t scaling_min_freq;
 
     /* for specific governor */
     union {
         xc_userspace_t userspace;
         xc_ondemand_t ondemand;
     } u;
-
-    int32_t turbo_enabled;
 };
 
 int xc_get_cpufreq_para(xc_interface *xch, int cpuid,

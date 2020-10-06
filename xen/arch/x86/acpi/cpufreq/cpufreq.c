@@ -40,6 +40,7 @@
 #include <asm/io.h>
 #include <asm/processor.h>
 #include <asm/cpufeature.h>
+#include <asm/cpufreq.h>
 #include <acpi/acpi.h>
 #include <acpi/cpufreq/cpufreq.h>
 
@@ -640,10 +641,14 @@ static int __init cpufreq_driver_init(void)
 {
     int ret = 0;
 
-    if ((cpufreq_controller == FREQCTL_xen) &&
-        (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL))
-        ret = cpufreq_register_driver(&acpi_cpufreq_driver);
-    else if ((cpufreq_controller == FREQCTL_xen) &&
+     if ((cpufreq_controller == FREQCTL_xen) &&
+          (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL))
+     {
+         ret = intel_pstate_init();
+         if ( ret )
+             ret = cpufreq_register_driver(&acpi_cpufreq_driver);
+     }
+     else if ((cpufreq_controller == FREQCTL_xen) &&
         (boot_cpu_data.x86_vendor &
          (X86_VENDOR_AMD | X86_VENDOR_HYGON)))
         ret = powernow_register_driver();

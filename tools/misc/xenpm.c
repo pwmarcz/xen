@@ -33,6 +33,8 @@
 #define MAX_PKG_RESIDENCIES 12
 #define MAX_CORE_RESIDENCIES 8
 
+#define clamp_t(type, val, lo, hi) min_t(type, max_t(type, val, lo), hi)
+
 static xc_interface *xc_handle;
 static unsigned int max_cpu_nr;
 
@@ -48,6 +50,9 @@ void show_help(void)
             " get-cpufreq-average   [cpuid]       average cpu frequency since last invocation\n"
             "                                     for CPU <cpuid> or all\n"
             " get-cpufreq-para      [cpuid]       list cpu freq parameter of CPU <cpuid> or all\n"
+            " set-scaling-max-pct   [cpuid] <num> set max performance limit in percentage\n"
+            "                                     or as scaling speed in percentage in userspace governor\n"
+            " set-scaling-min-pct   [cpuid] <num> set min performance limit in percentage\n"
             " set-scaling-maxfreq   [cpuid] <HZ>  set max cpu frequency <HZ> on CPU <cpuid>\n"
             "                                     or all CPUs\n"
             " set-scaling-minfreq   [cpuid] <HZ>  set min cpu frequency <HZ> on CPU <cpuid>\n"
@@ -732,37 +737,51 @@ static void print_cpufreq_para(int cpuid, struct xc_get_cpufreq_para *p_cpufreq)
 
     printf("current_governor     : %s\n", p_cpufreq->scaling_governor);
     if ( !strncmp(p_cpufreq->scaling_governor,
-                  "userspace", CPUFREQ_NAME_LEN) )
+                  "userspace", CPUFREQ_NAME_LEN) &&
+         strncmp(p_cpufreq->scaling_driver,
+                 "intel_pstate", CPUFREQ_NAME_LEN) )
     {
-        printf("  userspace specific :\n");
-        printf("    scaling_setspeed : %u\n",
+        printf("userspace specific   :\n");
+        printf("scaling_setspeed     : %u\n",
                p_cpufreq->u.userspace.scaling_setspeed);
     }
     else if ( !strncmp(p_cpufreq->scaling_governor,
-                       "ondemand", CPUFREQ_NAME_LEN) )
+                       "ondemand", CPUFREQ_NAME_LEN) &&
+              strncmp(p_cpufreq->scaling_driver,
+                      "intel_pstate", CPUFREQ_NAME_LEN) )
     {
-        printf("  ondemand specific  :\n");
-        printf("    sampling_rate    : max [%u] min [%u] cur [%u]\n",
+        printf("ondemand specific    :\n");
+        printf("sampling_rate        : max [%u] min [%u] cur [%u]\n",
                p_cpufreq->u.ondemand.sampling_rate_max,
                p_cpufreq->u.ondemand.sampling_rate_min,
                p_cpufreq->u.ondemand.sampling_rate);
-        printf("    up_threshold     : %u\n",
+        printf("up_threshold         : %u\n",
                p_cpufreq->u.ondemand.up_threshold);
     }
 
-    printf("scaling_avail_freq   :");
-    for ( i = 0; i < p_cpufreq->freq_num; i++ )
-        if ( p_cpufreq->scaling_available_frequencies[i] ==
-             p_cpufreq->scaling_cur_freq )
-            printf(" *%d", p_cpufreq->scaling_available_frequencies[i]);
-        else
-            printf(" %d", p_cpufreq->scaling_available_frequencies[i]);
-    printf("\n");
-
-    printf("scaling frequency    : max [%u] min [%u] cur [%u]\n",
-           p_cpufreq->scaling_max_freq,
-           p_cpufreq->scaling_min_freq,
-           p_cpufreq->scaling_cur_freq);
+    switch ( p_cpufreq->perf_alias )
+    {
+    case PERCENTAGE:
+        printf("max_perf_pct         : %d\n", p_cpufreq->scaling_max_perf);
+        printf("min_perf_pct         : %d\n", p_cpufreq->scaling_min_perf);
+        printf("turbo_pct            : %d\n", p_cpufreq->scaling_turbo_pct);
+        break;
+    case FREQUENCY:
+    default:
+        printf("scaling_avail_freq   :");
+        for ( i = 0; i < p_cpufreq->freq_num; i++ )
+            if ( p_cpufreq->scaling_available_frequencies[i] ==
+                 p_cpufreq->scaling_cur_freq )
+                printf(" *%d", p_cpufreq->scaling_available_frequencies[i]);
+            else
+                printf(" %d", p_cpufreq->scaling_available_frequencies[i]);
+        printf("\n");
+        printf("scaling frequency    : max [%u] min [%u] cur [%u]\n",
+               p_cpufreq->scaling_max_perf,
+               p_cpufreq->scaling_min_perf,
+               p_cpufreq->scaling_cur_freq);
+        break;
+    }
 
     printf("turbo mode           : %s\n",
            p_cpufreq->turbo_enabled ? "enabled" : "disabled or n/a");
@@ -905,6 +924,54 @@ void scaling_min_freq_func(int argc, char *argv[])
     {
         if ( xc_set_cpufreq_para(xc_handle, cpuid, SCALING_MIN_FREQ, freq) )
             fprintf(stderr, "failed to set scaling min freq (%d - %s)\n",
+                    errno, strerror(errno));
+    }
+}
+
+void scaling_max_pct_func(int argc, char *argv[])
+{
+    int cpuid = -1, pct = -1;
+
+    parse_cpuid_and_int(argc, argv, &cpuid, &pct, "percentage");
+    pct = clamp_t(int, pct, 0, 100);
+
+    if ( cpuid < 0 )
+    {
+        int i;
+        for ( i = 0; i < max_cpu_nr; i++ )
+            if ( xc_set_cpufreq_para(xc_handle, i, SCALING_MAX_PCT, pct) )
+                fprintf(stderr,
+                        "[CPU%d] failed to set scaling max freq (%d - %s)\n",
+                        i, errno, strerror(errno));
+    }
+    else
+    {
+        if ( xc_set_cpufreq_para(xc_handle, cpuid, SCALING_MAX_PCT, pct) )
+            fprintf(stderr, "failed to set scaling max freq (%d - %s)\n",
+                    errno, strerror(errno));
+    }
+}
+
+void scaling_min_pct_func(int argc, char *argv[])
+{
+    int cpuid = -1, pct = -1;
+
+    parse_cpuid_and_int(argc, argv, &cpuid, &pct, "percentage");
+    pct = clamp_t(int, pct, 0, 100);
+
+    if ( cpuid < 0 )
+    {
+        int i;
+        for ( i = 0; i < max_cpu_nr; i++ )
+            if ( xc_set_cpufreq_para(xc_handle, i, SCALING_MIN_PCT, pct) )
+                fprintf(stderr,
+                        "[CPU%d] failed to set scaling max pct (%d - %s)\n",
+                        i, errno, strerror(errno));
+    }
+    else
+    {
+        if ( xc_set_cpufreq_para(xc_handle, cpuid, SCALING_MIN_PCT, pct) )
+            fprintf(stderr, "failed to set scaling min pct (%d - %s)\n",
                     errno, strerror(errno));
     }
 }
@@ -1228,6 +1295,8 @@ struct {
     { "get-cpufreq-para", cpufreq_para_func },
     { "set-scaling-maxfreq", scaling_max_freq_func },
     { "set-scaling-minfreq", scaling_min_freq_func },
+    { "set-scaling-max-pct", scaling_max_pct_func},
+    { "set-scaling-min-pct", scaling_min_pct_func},
     { "set-scaling-governor", scaling_governor_func },
     { "set-scaling-speed", scaling_speed_func },
     { "set-sampling-rate", scaling_sampling_rate_func },
